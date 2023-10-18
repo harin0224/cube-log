@@ -12,12 +12,12 @@ data class OpenAPIRequestDto(
 
 data class CubeFromNexonResponseDto(
     val count: Int,
-    val cube_histories: CubeHistoriesDto
+    val cube_histories: Array<CubeHistoriesDto>
+    val next_cursor: String
 )
-
 data class CubeHistoriesDto(
     val id: String,
-    val characte_name: String,
+    val character_name: String,
     val cube_type: String,
     val create_date: String,
     val item_upgrade_result: String,
@@ -29,7 +29,26 @@ data class CubeHistoriesDto(
     val additional_potential_option_grade: String,
     val upgrade_guarantee: Boolean,
     val upgrade_guarantee_count: Int,
-    //val beforePotentialOptions: BeforePotentialOptionDto
+    val before_potential_options: Array<BeforePotentialOptionDto>,
+    val before_additional_potential_options: Array<BeforeAdditionalPotentialOptionDto>,
+    val after_potential_options: Array<AfterPotentialOptionDto>,
+    val after_additional_potential_options: Array<AfterAdditionalPotentialOptionDto>
 )
 
-//data class BeforePotentialOptionDto( )
+data class BeforePotentialOptionDto(
+    var value: String,
+    var grade: String
+)
+data class BeforeAdditionalPotentialOptionDto(
+    var value: String,
+    var grade: String
+)
+data class AfterPotentialOptionDto(
+    var value: String,
+    var grade: String
+)
+data class AfterAdditionalPotentialOptionDto(
+    var value: String,
+    var grade: String
+)
+
