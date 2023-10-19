@@ -6,14 +6,14 @@ data class CubeResponseDto (
 
 data class OpenAPIRequestDto(
     val count: Int = 1000,
-    val date: String = "2023-10-15",
-    val cursor: String? = null
+    var date: String? = "2023-10-15",
+    var cursor: String? = null
 )
 
 data class CubeFromNexonResponseDto(
-    val count: Int,
-    val cube_histories: Array<CubeHistoriesDto>
-    val next_cursor: String
+    var count: Int,
+    var cube_histories: Array<CubeHistoriesDto>,
+    var next_cursor: String
 )
 data class CubeHistoriesDto(
     val id: String,
