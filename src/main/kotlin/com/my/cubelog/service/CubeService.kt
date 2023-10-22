@@ -21,25 +21,31 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         val params = OpenAPIRequestDto()
         var saveResponse = CubeFromNexonResponseDto(count = 1000, cube_histories = arrayOf<CubeHistoriesDto>(), next_cursor = "")
         //var saveResponse: CubeFromNexonResponseDto? = null
-        LocalDate.of(2023, 10, 15)//20221125
+        LocalDate.of(2022, 11, 25)//20221125
             .datesUntil(LocalDate.of(year, month, date-1).plusDays(1))
             .forEach { it ->
                 params.date = it.toString()
                 var response = httpService.getCubeFromNexon(params, key)
                 var cursor = response?.next_cursor
-                while (cursor != null) {
-                    params.date = null
-                    params.cursor = cursor
-                    var nextResponse = httpService.getCubeFromNexon(params, key)
+                println("날짜:" + params.date)
+                while (!cursor.isNullOrEmpty()) {
+                    //println("와일도는중" + cursor)
+                    var nextParams = OpenAPIRequestDto()
+                    nextParams.date = ""
+                    nextParams.cursor = cursor
+                    var nextResponse = httpService.getCubeFromNexon(nextParams, key)
+                    if (nextResponse != null) {
+                        saveResponse.count += nextResponse.count
+                        saveResponse.cube_histories = saveResponse.cube_histories.plus(nextResponse.cube_histories)
+                    }
                     cursor = nextResponse?.next_cursor
                 }
-                if (response != null){
+                if (response != null) {
                     saveResponse.count += response.count
-                    //saveResponse.cube_histories
+                    saveResponse.cube_histories = saveResponse.cube_histories.plus(response.cube_histories)
                 }
             }
-
-
+        print(saveResponse.cube_histories.size)
         var a = CubeResponseDto()   //추후 가공데이터 입력
         return a
     }
