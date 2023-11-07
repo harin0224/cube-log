@@ -1,12 +1,12 @@
 package com.my.cubelog.dto
 
-data class CubeResponseDto (
+data class CubeResponseDto(
     val data: String = " "
 )
 
 data class OpenAPIRequestDto(
     val count: Int = 1000,
-    var date: String? = "2023-10-15",
+    var date: String? = "2022-11-25",
     var cursor: String? = null
 )
 
@@ -15,6 +15,7 @@ data class CubeFromNexonResponseDto(
     var cube_histories: Array<CubeHistoriesDto>,
     var next_cursor: String
 )
+
 data class CubeHistoriesDto(
     val id: String,
     val character_name: String,
@@ -39,14 +40,17 @@ data class BeforePotentialOptionDto(
     var value: String,
     var grade: String
 )
+
 data class BeforeAdditionalPotentialOptionDto(
     var value: String,
     var grade: String
 )
+
 data class AfterPotentialOptionDto(
     var value: String,
     var grade: String
 )
+
 data class AfterAdditionalPotentialOptionDto(
     var value: String,
     var grade: String
@@ -56,6 +60,7 @@ data class CubeEvent(
     var miracle: Map<CubeType, List<CubeRollHistories>> = mutableMapOf(),
     var common: Map<CubeType, List<CubeRollHistories>> = mutableMapOf()
 )
+
 enum class CubeType(val value: String) {
     OCCULT_CUBE("수상한 큐브"),
     MASTER_CRAFTS_MANS_CUBE("명장의 큐브"),
@@ -63,6 +68,7 @@ enum class CubeType(val value: String) {
     EVENT_RING_CUBE("이벤트 링 전용 명장의 큐브"),
     RED_CUBE("레드 큐브"),
     BLACK_CUBE("블랙 큐브"),
+    BONUS_OCCULT_CUBE("수상한 에디셔널 큐브"),
     BONUS_POTENTIAL_CUBE("에디셔널 큐브"),
     WHITE_CUBE("화이트 에디셔널 큐브");
 }
@@ -81,8 +87,8 @@ data class CubeRollHistories(
 //    var upgradeGuaranteeCount: Int
 )
 
-enum class Grade(val value: String){
-    RARE_TO_EPIC("노말"),
+enum class Grade(val value: String) {
+    RARE_TO_EPIC("레어"),
     EPIC_TO_UNIQUE("에픽"),
     UNIQUE_TO_LEGENDARY("유니크");
 
@@ -137,6 +143,47 @@ enum class Grade(val value: String){
                                 {
                                         "value": "INT : +9%",
                                         "grade": "유니크"
+                                }
+                        ],
+                        "after_additional_potential_options": []
+                },
+                *
+                * {
+        "count": 4,
+        "cube_histories": [
+                {
+                        "id": "QzwgKwgm8JG3G-fTs1SmEEcR",
+                        "character_name": "담치담",
+                        "create_date": "2023-10-26T18:57:51+09:00",
+                        "cube_type": "수상한 큐브",
+                        "item_upgrade_result": "실패",
+                        "miracle_time_flag": "이벤트 적용되지 않음",
+                        "item_equip_part": "펜던트",
+                        "item_level": 120,
+                        "target_item": "카오스 혼테일의 목걸이",
+                        "potential_option_grade": "레어",
+                        "additional_potential_option_grade": "노멀",
+                        "upgradeguarantee": false,
+                        "upgradeguaranteecount": 0,
+                        "before_potential_options": [
+                                {
+                                        "value": "최대 HP : +120",
+                                        "grade": "레어"
+                                },
+                                {
+                                        "value": "LUK : +6",
+                                        "grade": "노멀"
+                                }
+                        ],
+                        "before_additional_potential_options": [],
+                        "after_potential_options": [
+                                {
+                                        "value": "INT : +12",
+                                        "grade": "레어"
+                                },
+                                {
+                                        "value": "최대 MP : +60",
+                                        "grade": "노멀"
                                 }
                         ],
                         "after_additional_potential_options": []
