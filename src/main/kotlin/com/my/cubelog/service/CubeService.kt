@@ -19,16 +19,14 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         var saveResponse =
             CubeFromNexonResponseDto(count = 1000, cube_histories = arrayOf<CubeHistoriesDto>(), next_cursor = "")
         //var saveResponse: CubeFromNexonResponseDto? = null
-        LocalDate.of(2023, 9, 15)//20221125
+        LocalDate.of(2022, 11, 25)//20221125
             .datesUntil(LocalDate.of(year, month, date - 1).plusDays(1))
             .forEach { it ->
                 params.date = it.toString()
                 var response = httpService.getCubeFromNexon(params, key)
                 var cursor = response?.next_cursor
-                //println("날짜:" + params.date)
                 // 데이터 병합
                 while (!cursor.isNullOrEmpty()) {
-                    //println("와일도는중" + cursor)
                     var nextParams = OpenAPIRequestDto()
                     nextParams.date = ""
                     nextParams.cursor = cursor
@@ -48,23 +46,24 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
 
 
         for (idx in saveResponse.cube_histories) {
-
             val cubeType = mapStringToCubeType(idx.cube_type)
             var cubeGrade: String =
                 if (potentialGroup(cubeType) == "potentialOption") idx.potential_option_grade
                 else idx.additional_potential_option_grade
-            if (!upgradeGroup(cubeType, cubeGrade)) {
+            val eventType = if (idx.miracle_time_flag == "이벤트 적용되지 않음") "common"
+            else "miracle" //미라클인지 아닌지
+            var changeGrade = setUpgradeGrade(Grade from cubeGrade, idx.item_upgrade_result)
+            if (!upgradeGroup(cubeType, changeGrade)) {
                 continue
             }
-//            if (cubeType == CubeType.MASTER_CRAFTS_MANS_CUBE || cubeType == CubeType.EVENT_RING_CUBE) {
-//                println(idx)
+//            if (cubeType == CubeType.BLACK_CUBE && eventType == "miracle") {
+//                print(changeGrade)
+//                println(": $idx")
+//
 //            }
-
             //var lastHistory: CubeRollHistories? = null
             var lastIndex: Int = 0
             //var eventType:String = ""
-            val eventType = if (idx.miracle_time_flag == "이벤트 적용되지 않음") "common"
-            else "miracle" //미라클인지 아닌지
             //println("이벤트 타입:$eventType")
             var cubeData = mutableMapOf<CubeType, ArrayList<CubeRollHistories>>()
             if (eventType == "miracle") {
@@ -75,24 +74,23 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
 
             //lastIndex = (cubeData[cubeType]?.filter{it.grade == Grade from idx.potential_option_grade}?.size ?: 0) - 1    //마지막 값
             if (cubeData[cubeType] != null) {
-                var filtered = cubeData[cubeType]?.filter { it.grade == Grade from cubeGrade }
+                var filtered = cubeData[cubeType]?.filter { it.grade == changeGrade }
                 if (!filtered.isNullOrEmpty()) {
                     //println("필터:$filtered")
                     lastIndex = cubeData[cubeType]?.lastIndexOf(filtered.last()) ?: -1
                     if (lastIndex >= 0) { //이전에 데이터가 있을 시
                         if (idx.item_upgrade_result == "성공") {    //현 데이터가 등업된 데이터일 시
                             cubeData[cubeType]?.get(lastIndex)?.isUpgrade = true
-                            cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = Grade from cubeGrade))
+                            cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = changeGrade))
                         } else {   //등업 실패 시
                             cubeData[cubeType]?.get(lastIndex)?.count = cubeData[cubeType]?.get(lastIndex)?.count!! + 1
-                            //println("카운트 추가")
+                            cubeData[cubeType]?.get(lastIndex)?.count = cubeData[cubeType]?.get(lastIndex)?.count!! + 1
                         }
                     } else {  //이전에 데이터가 없을 시
-                        cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = Grade from cubeGrade))
+                        cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = changeGrade))
                     }
                 } else {
-                    cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = Grade from cubeGrade))
-                    //println("필터null:$cubeData")
+                    cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = changeGrade))
                 }
 
                 if (eventType == "miracle") {
@@ -104,7 +102,7 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
                 cubeData[cubeType] = mutableListOf(
                     CubeRollHistories(
                         count = 1,
-                        grade = Grade.from(cubeGrade)
+                        grade = changeGrade
                     )
                 ) as ArrayList<CubeRollHistories>
             }
@@ -150,12 +148,24 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         }
     }
 
-    fun upgradeGroup(useCube: CubeType, useGrade: String): Boolean {
-        return if (useGrade == "에픽" && (useCube == CubeType.OCCULT_CUBE || useCube == CubeType.BONUS_OCCULT_CUBE)) {
+    fun upgradeGroup(useCube: CubeType, useGrade: Grade?): Boolean {
+        return if (useGrade == Grade.EPIC_TO_UNIQUE && (useCube == CubeType.OCCULT_CUBE || useCube == CubeType.BONUS_OCCULT_CUBE)) {
             false
-        } else if (useGrade == "유니크" && (useCube == CubeType.MEISTER_CUBE)) {
+        } else if (useGrade == Grade.UNIQUE_TO_LEGENDARY && (useCube == CubeType.MEISTER_CUBE)) {
             false
-        } else useGrade != "레전드리"
+        } else useGrade != null
+    }
+
+    fun setUpgradeGrade(grade: Grade?, upgrade: String): Grade? {
+        return if (upgrade == "성공") {
+            when (grade) {
+                Grade.UNIQUE_TO_LEGENDARY -> Grade.EPIC_TO_UNIQUE
+                Grade.EPIC_TO_UNIQUE -> Grade.RARE_TO_EPIC
+                else -> Grade.UNIQUE_TO_LEGENDARY
+            }
+        } else {
+            grade
+        }
     }
 
 
