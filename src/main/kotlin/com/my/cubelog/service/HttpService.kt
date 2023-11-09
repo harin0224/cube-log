@@ -9,7 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient
 @Service
 class HttpService(private val webBuilder: WebClient.Builder){
     var BASE_URL:String = "https://public.api.nexon.com/openapi/maplestory/v1/cube-use-results"
-    var webClient:WebClient = webBuilder.baseUrl(BASE_URL).build()
+    var webClient:WebClient = webBuilder.baseUrl(BASE_URL).codecs { configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024) }.build()
     fun getCubeFromNexon(params: OpenAPIRequestDto, apiKey: String): CubeFromNexonResponseDto? {
         val response = webClient.get()
             .uri{ uriBuilder -> uriBuilder
