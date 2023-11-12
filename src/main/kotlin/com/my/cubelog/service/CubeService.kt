@@ -1,11 +1,14 @@
 package com.my.cubelog.service
 
+import com.my.cubelog.common.Common.Companion.getProbability
 import com.my.cubelog.dto.*
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient;
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.math.pow
 
 @Service
 class CubeService(private val webBuilder: WebClient.Builder, val httpService: HttpService) {
@@ -168,11 +171,80 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         }
     }
 
+    fun getCubePersonalAverage(key: String): CubePersonalAverageDto {
+        var resultData = getCube(key)
+        var miracleData: MutableMap<CubeType, MutableMap<Grade, ArrayList<Int>>> = mutableMapOf()
+        var commonData: MutableMap<CubeType, MutableMap<Grade, ArrayList<Int>>> = mutableMapOf()
 
-    fun getCubePersonalAverage(key: String): CubeResponseDto {
-        var a = CubeResponseDto()
-        return a
+        var n: Double? = 0.0    //성공확률
+        var m = 0
+        var j = 0
+        var average: ArrayList<MutableMap<CubeType, MutableMap<Grade, Double>>> = ArrayList()
+        resultData.miracle.forEach { (key, value) ->
+            //getProbability(key, value.grade)
+            for (idx in value) {
+                miracleData[key] = (miracleData[key] ?: mutableMapOf())
+                miracleData[key]!![idx.grade!!] = (miracleData[key]!![idx.grade] ?: arrayListOf(0, 0))
+                miracleData[key]!![idx.grade!!]!![0] += idx.count
+                if (idx.isUpgrade) {
+                    miracleData[key]!![idx.grade!!]!![1]++
+                }
+            }
+        }
+        println(miracleData)
+        miracleData.forEach { (key, value) ->
+            value.forEach { (gradeKey, info) ->
+                n = getProbability(key, gradeKey) // 성공 확률
+                m = info[0]
+                j = info[1]
+                average[0] = (average[0] ?: mutableMapOf())
+                average[0][key] = (average[0][key] ?: mutableMapOf())
+                average[0][key]!![gradeKey] = calculateSuccessProbability(n, m, j)
+                //average[0][key]?.set(gradeKey, calculateSuccessProbability(n, m, j))
+            }
+        }
+
+        resultData.common.forEach { (key, value) ->
+            for (idx in value) {
+                commonData[key] = (commonData[key] ?: mutableMapOf())
+                commonData[key]!![idx.grade!!] = (commonData[key]!![idx.grade] ?: arrayListOf(0, 0))
+                commonData[key]!![idx.grade!!]!![0] += idx.count
+                if (idx.isUpgrade) {
+                    commonData[key]!![idx.grade!!]!![1]++
+                }
+            }
+        }
+        println(resultData)
+        commonData.forEach { (key, value) ->
+            value.forEach { (gradeKey, info) ->
+                n = getProbability(key, gradeKey) // 성공 확률
+                m = info[0]
+                j = info[1]
+                average[0] = (average[0] ?: mutableMapOf())
+                average[1][key] = (average[1][key] ?: mutableMapOf())
+                average[1][key]!![gradeKey] = calculateSuccessProbability(n, m, j)
+                //average[0][key]?.set(gradeKey, calculateSuccessProbability(n, m, j))
+            }
+        }
+        return average
     }
+
+    fun calculateSuccessProbability(n: Double?, m: Int, j: Int): Double {
+        val p = n!! / 100.0 // 확률을 0과 1 사이의 값으로 변환
+        val combination = calculateCombination(m, j)
+        val successProbability = combination * p.pow(j) * (1 - p).pow(m - j)
+        return successProbability
+    }
+
+    fun calculateCombination(n: Int, k: Int): Long {
+        var result: Long = 1
+        for (i in 1..k) {
+            result *= (n - i + 1)
+            result /= i
+        }
+        return result
+    }
+
 
     fun getCubeAllAverage(key: String): CubeResponseDto {
         var a = CubeResponseDto()
@@ -183,5 +255,4 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         var a = CubeResponseDto()
         return a
     }
-
 }

@@ -4,6 +4,8 @@ data class CubeResponseDto(
     val data: String = " "
 )
 
+typealias CubePersonalAverageDto = ArrayList<MutableMap<CubeType, MutableMap<Grade, Double>>>
+
 data class OpenAPIRequestDto(
     val count: Int = 1000,
     var date: String? = "2022-11-25",

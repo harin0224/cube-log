@@ -1,6 +1,7 @@
 package com.my.cubelog.controller
 
 import com.my.cubelog.dto.CubeEvent
+import com.my.cubelog.dto.CubePersonalAverageDto
 import com.my.cubelog.dto.CubeResponseDto
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -17,7 +18,8 @@ class CubeController(val service: CubeService) {
     fun cube(@RequestParam("key") key: String): CubeEvent = service.getCube(key)
 
     @GetMapping("/personal-average")
-    fun cubePersonalAverage(@RequestParam("key") key: String): CubeResponseDto = service.getCubePersonalAverage(key)
+    fun cubePersonalAverage(@RequestParam("key") key: String): CubePersonalAverageDto =
+        service.getCubePersonalAverage(key)
 
     @GetMapping("/all-average")
     fun cubeAllAverage(@RequestParam("key") key: String): CubeResponseDto = service.getCubeAllAverage(key)
