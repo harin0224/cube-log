@@ -23,7 +23,4 @@ class CubeController(val service: CubeService) {
 
     @GetMapping("/all-average")
     fun cubeAllAverage(@RequestParam("key") key: String): CubeResponseDto = service.getCubeAllAverage(key)
-
-    @GetMapping("/simulator-average")
-    fun cubeSimulatorAverage(@RequestParam("key") key: String): CubeResponseDto = service.getCubeSimulatorAverage(key)
 }
