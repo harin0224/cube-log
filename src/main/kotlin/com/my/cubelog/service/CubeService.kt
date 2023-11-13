@@ -1,11 +1,14 @@
 package com.my.cubelog.service
 
+import com.my.cubelog.common.Common.Companion.getProbability
 import com.my.cubelog.dto.*
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient;
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.math.pow
 
 @Service
 class CubeService(private val webBuilder: WebClient.Builder, val httpService: HttpService) {
@@ -18,7 +21,6 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         val params = OpenAPIRequestDto()
         var saveResponse =
             CubeFromNexonResponseDto(count = 1000, cube_histories = arrayOf<CubeHistoriesDto>(), next_cursor = "")
-        //var saveResponse: CubeFromNexonResponseDto? = null
         LocalDate.of(2022, 11, 25)//20221125
             .datesUntil(LocalDate.of(year, month, date - 1).plusDays(1))
             .forEach { it ->
@@ -56,15 +58,7 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
             if (!upgradeGroup(cubeType, changeGrade)) {
                 continue
             }
-//            if (cubeType == CubeType.BLACK_CUBE && eventType == "miracle") {
-//                print(changeGrade)
-//                println(": $idx")
-//
-//            }
-            //var lastHistory: CubeRollHistories? = null
             var lastIndex: Int = 0
-            //var eventType:String = ""
-            //println("이벤트 타입:$eventType")
             var cubeData = mutableMapOf<CubeType, ArrayList<CubeRollHistories>>()
             if (eventType == "miracle") {
                 cubeData = resultData.miracle as MutableMap<CubeType, ArrayList<CubeRollHistories>>
@@ -72,21 +66,19 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
                 cubeData = resultData.common as MutableMap<CubeType, ArrayList<CubeRollHistories>>
             }
 
-            //lastIndex = (cubeData[cubeType]?.filter{it.grade == Grade from idx.potential_option_grade}?.size ?: 0) - 1    //마지막 값
             if (cubeData[cubeType] != null) {
                 var filtered = cubeData[cubeType]?.filter { it.grade == changeGrade }
                 if (!filtered.isNullOrEmpty()) {
-                    //println("필터:$filtered")
                     lastIndex = cubeData[cubeType]?.lastIndexOf(filtered.last()) ?: -1
-                    if (lastIndex >= 0) { //이전에 데이터가 있을 시
-                        if (idx.item_upgrade_result == "성공") {    //현 데이터가 등업된 데이터일 시
+                    if (lastIndex >= 0) { // 이전에 데이터가 있을 시
+                        if (idx.item_upgrade_result == "성공") {    // 현 데이터가 등업된 데이터일 시
                             cubeData[cubeType]?.get(lastIndex)?.isUpgrade = true
                             cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = changeGrade))
-                        } else {   //등업 실패 시
+                        } else {   // 등업 실패 시
                             cubeData[cubeType]?.get(lastIndex)?.count = cubeData[cubeType]?.get(lastIndex)?.count!! + 1
                             cubeData[cubeType]?.get(lastIndex)?.count = cubeData[cubeType]?.get(lastIndex)?.count!! + 1
                         }
-                    } else {  //이전에 데이터가 없을 시
+                    } else {  // 이전에 데이터가 없을 시
                         cubeData[cubeType]?.add(CubeRollHistories(count = 1, grade = changeGrade))
                     }
                 } else {
@@ -125,20 +117,6 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         }
     }
 
-    fun getCount(useCube: List<CubeHistoriesDto>): Array<Int> {  // 큐브별 성공 개수 출력 함수
-        var count: Int = 0
-        var successCount: Array<Int> = arrayOf()
-        for (idx in useCube) {
-            if (idx.item_upgrade_result == "실패") {
-                count++
-            } else if (idx.item_upgrade_result == "성공") {
-                successCount += count
-                count = 0
-            }
-        }
-        return successCount
-    }
-
     fun potentialGroup(useCube: CubeType): String {
         return when (useCube) {
             CubeType.OCCULT_CUBE, CubeType.MASTER_CRAFTS_MANS_CUBE, CubeType.MEISTER_CUBE, CubeType.EVENT_RING_CUBE, CubeType.RED_CUBE, CubeType.BLACK_CUBE -> "potentialOption"
@@ -168,20 +146,86 @@ class CubeService(private val webBuilder: WebClient.Builder, val httpService: Ht
         }
     }
 
+    fun getCubePersonalAverage(key: String): CubePersonalAverageDto {
+        var resultData = getCube(key)
+        var miracleData: MutableMap<CubeType, MutableMap<Grade, ArrayList<Int>>> = mutableMapOf()
+        var commonData: MutableMap<CubeType, MutableMap<Grade, ArrayList<Int>>> = mutableMapOf()
 
-    fun getCubePersonalAverage(key: String): CubeResponseDto {
-        var a = CubeResponseDto()
-        return a
+        var successRate: Double? = 0.0    //성공확률
+        var trials = 0
+        var targetSuccess = 0
+        var average: ArrayList<MutableMap<CubeType, MutableMap<Grade, Double>>> = arrayListOf(
+            mutableMapOf(),
+            mutableMapOf()
+        )
+        resultData.miracle.forEach { (key, value) ->
+            for (idx in value) {
+                miracleData[key] = (miracleData[key] ?: mutableMapOf())
+                miracleData[key]!![idx.grade!!] = (miracleData[key]!![idx.grade] ?: arrayListOf(0, 0))
+                miracleData[key]!![idx.grade!!]!![0] += idx.count
+                if (idx.isUpgrade) {
+                    miracleData[key]!![idx.grade!!]!![1]++
+                }
+            }
+        }
+        miracleData.forEach { (key, value) ->
+            value.forEach { (gradeKey, info) ->
+                successRate = getProbability(key, gradeKey) // 성공 확률
+                trials = info[0]
+                targetSuccess = info[1]
+                average[0][key] = (average[0][key] ?: mutableMapOf())
+                average[0][key]!![gradeKey] = calculateSuccessProbability(successRate!!, trials, targetSuccess)
+            }
+        }
+
+        resultData.common.forEach { (key, value) ->
+            for (idx in value) {
+                commonData[key] = (commonData[key] ?: mutableMapOf())
+                commonData[key]!![idx.grade!!] = (commonData[key]!![idx.grade] ?: arrayListOf(0, 0))
+                commonData[key]!![idx.grade!!]!![0] += idx.count
+                if (idx.isUpgrade) {
+                    commonData[key]!![idx.grade!!]!![1]++
+                }
+            }
+        }
+        commonData.forEach { (key, value) ->
+            value.forEach { (gradeKey, info) ->
+                successRate = getProbability(key, gradeKey) // 성공 확률
+                trials = info[0]
+                targetSuccess = info[1]
+                average[0] = (average[0] ?: mutableMapOf())
+                average[1][key] = (average[1][key] ?: mutableMapOf())
+                average[1][key]!![gradeKey] = calculateSuccessProbability(successRate!!, trials, targetSuccess)
+            }
+        }
+        return average
+    }
+
+    fun calculateSuccessProbability(successRate: Double, trials: Int, targetSuccess: Int): Double {
+        val failureRate = 100 - successRate
+        val binomialCoefficient = calculateBinomialCoefficient(trials, targetSuccess)
+        val successPower = (successRate / 100).pow(targetSuccess.toDouble())
+        val failurePower = (failureRate / 100).pow((trials - targetSuccess).toDouble())
+        return binomialCoefficient * successPower * failurePower * 100
+    }
+
+    fun calculateBinomialCoefficient(n: Int, k: Int): Long {
+        if (k > n) return 0
+        if (k == 0 || k == n) return 1
+
+        var result = 1L
+        var min = k.coerceAtMost(n - k)
+
+        for (i in 0 until min) {
+            result *= (n - i)
+            result /= (i + 1)
+        }
+
+        return result
     }
 
     fun getCubeAllAverage(key: String): CubeResponseDto {
         var a = CubeResponseDto()
         return a
     }
-
-    fun getCubeSimulatorAverage(key: String): CubeResponseDto {
-        var a = CubeResponseDto()
-        return a
-    }
-
 }
