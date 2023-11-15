@@ -17,36 +17,12 @@ permissions:
   contents: read
 
 jobs:
-  build:
-
-    runs-on: Windows
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: PowerShell 실행 정책 변경
-        run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'adopt'
-          java-version: '17'
-
-      - name: Build with Gradle
-        run: |
-          ./gradlew clean build
-
   docker:
     runs-on: Windows
     needs: build
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-
-      - name: PowerShell 실행 정책 변경
-        run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
       - name: Set up JDK 17
         uses: actions/setup-java@v2
