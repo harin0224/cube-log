@@ -19,7 +19,6 @@ permissions:
 jobs:
   docker:
     runs-on: Windows
-    needs: build
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
